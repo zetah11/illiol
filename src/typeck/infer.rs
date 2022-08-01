@@ -32,6 +32,13 @@ impl Checker {
                 )
             }
 
+            hir::Expr::Call(func, arg) => {
+                let func = Box::new(self.infer_expr(*func));
+                let (arg_ty, ret_ty) = self.as_fun_ty(func.anno);
+                let arg = Box::new(self.check_expr(*arg, arg_ty));
+                (mir::ExprNode::Call(func, arg), ret_ty)
+            }
+
             hir::Expr::Lit(hir::Literal::Boolean(v)) => (
                 mir::ExprNode::Lit(mir::Literal::Boolean(v)),
                 self.boolean_type(),
