@@ -1,7 +1,7 @@
+use super::tween as mir;
+use super::types::TypeId;
 use super::Checker;
 use crate::hir;
-use crate::mir;
-use crate::types::TypeId;
 
 impl Checker {
     pub fn bind(&mut self, pat: hir::Pat, ty: TypeId) -> mir::Pat {

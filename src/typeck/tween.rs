@@ -1,6 +1,8 @@
+pub use crate::mir::{Literal, Operator};
+
 use std::collections::HashMap;
 
-use crate::types::{TypeId, Types};
+use super::types::{TypeId, Types};
 
 pub type Name = String;
 
@@ -47,26 +49,6 @@ pub enum ExprNode {
     Invalid,
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum Operator {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Exp,
-    Mod,
-
-    And,
-    AndDo,
-    Or,
-    OrDo,
-    Xor,
-
-    Not,
-
-    In,
-}
-
 #[derive(Clone, Debug)]
 pub enum Pat {
     Constructor(Name),
@@ -74,12 +56,4 @@ pub enum Pat {
     Apply(Box<Pat>, Box<Pat>),
     Lit(Literal),
     Wildcard,
-}
-
-#[derive(Clone, Debug)]
-pub enum Literal {
-    Boolean(bool),
-    Integer(i64),
-    String(String),
-    Regex(String),
 }

@@ -77,7 +77,7 @@ pub enum Operator {
 pub enum Pat {
     Constructor(Name),
     Bind(Name),
-    Apply(Box<Pat>, Vec<Pat>),
+    Apply(Box<Pat>, Box<Pat>),
     Lit(Literal),
     Wildcard,
 }

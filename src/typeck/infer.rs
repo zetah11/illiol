@@ -1,6 +1,6 @@
+use super::tween as mir;
 use super::Checker;
 use crate::hir;
-use crate::mir;
 
 impl Checker {
     pub fn infer_expr(&mut self, expr: hir::Expr) -> mir::Expr {

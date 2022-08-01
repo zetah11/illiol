@@ -1,5 +1,5 @@
+use super::types::{Type, TypeId};
 use super::Checker;
-use crate::types::{Type, TypeId};
 
 impl Checker {
     pub fn check_assignable(&mut self, into: TypeId, from: TypeId) {

@@ -2,12 +2,17 @@ mod assign;
 mod bind;
 mod check;
 mod infer;
+mod substitute;
+mod tween;
+mod types;
 
 use std::collections::HashMap;
 
 use crate::hir;
 use crate::mir;
-use crate::types::{Type, TypeId, Types};
+use crate::types as varless;
+
+use types::{Type, TypeId, Types};
 
 pub fn typeck(prog: hir::Decls) -> mir::Program {
     let mut checker = Checker::new();
@@ -23,10 +28,16 @@ pub fn typeck(prog: hir::Decls) -> mir::Program {
         values.insert(name, item);
     }
 
+    let values = values
+        .into_iter()
+        .map(|(name, expr)| (name, checker.substitute(expr)))
+        .collect();
+    let (context, types) = checker.ctx_and_types();
+
     mir::Program {
-        context: checker.context,
+        context,
+        types,
         decls: mir::Decls { values },
-        types: checker.types,
     }
 }
 
@@ -46,6 +57,23 @@ impl Checker {
 
     pub fn declare(&mut self, name: mir::Name, ty: TypeId) {
         self.context.insert(name, ty);
+    }
+
+    pub fn ctx_and_types(mut self) -> (HashMap<mir::Name, varless::TypeId>, varless::Types) {
+        let ctx: HashMap<_, _> = self.context.drain().collect();
+        let ctx = ctx
+            .into_iter()
+            .map(|(name, ty)| (name, self.subst_typeid(ty)))
+            .collect();
+
+        let old_types = std::mem::take(&mut self.types);
+        let mut types = varless::Types::new();
+
+        for (id, ty) in old_types {
+            types.add(varless::TypeId(id.0), self.subst_type(ty));
+        }
+
+        (ctx, types)
     }
 
     fn make_type(&mut self, ty: &hir::Type) -> TypeId {

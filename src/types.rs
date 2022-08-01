@@ -1,40 +1,11 @@
-use bimap::BiMap;
+use std::collections::HashMap;
 
 use crate::Regex;
 
-#[derive(Debug, Default)]
-pub struct Types {
-    types: BiMap<TypeId, Type>,
-}
-
-impl Types {
-    pub fn new() -> Self {
-        Self {
-            types: BiMap::new(),
-        }
-    }
-
-    /// Add a type to the structure and get back its id. This function memoizes
-    /// its input, such that giving it the same type always returns the same id.
-    pub fn add(&mut self, ty: Type) -> TypeId {
-        if let Some(id) = self.types.get_by_right(&ty) {
-            *id
-        } else {
-            let id = TypeId(self.types.len());
-            self.types.insert(id, ty);
-            id
-        }
-    }
-
-    pub fn get(&self, id: &TypeId) -> &Type {
-        self.types.get_by_left(id).unwrap()
-    }
-}
-
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct TypeId(usize);
+pub struct TypeId(pub(crate) usize);
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum Type {
     Bottom,
     Bool,
@@ -48,22 +19,23 @@ pub enum Type {
     Error,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{Type, Types};
+#[derive(Debug, Default)]
+pub struct Types {
+    types: HashMap<TypeId, Type>,
+}
 
-    #[test]
-    fn types_is_injective() {
-        let mut types = Types::new();
-        let a = types.add(Type::Bool);
-        let b = types.add(Type::Bool);
-        let c = types.add(Type::Range(-5, 10));
-        let d = types.add(Type::Range(-5, 10));
+impl Types {
+    pub(crate) fn new() -> Self {
+        Self {
+            types: HashMap::new(),
+        }
+    }
 
-        let x = types.add(Type::Arrow(a, c));
-        let y = types.add(Type::Arrow(b, d));
+    pub(crate) fn add(&mut self, id: TypeId, ty: Type) {
+        self.types.insert(id, ty);
+    }
 
-        assert_eq!(x, y);
-        assert_ne!(x, d);
+    pub fn get(&self, id: &TypeId) -> &Type {
+        self.types.get(id).unwrap()
     }
 }
