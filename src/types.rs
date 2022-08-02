@@ -5,7 +5,7 @@ use crate::Regex;
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct TypeId(pub(crate) usize);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Type {
     Bottom,
     Bool,
