@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use log::debug;
 
 use self::solve::Constraint;
+use self::tween::Mutability;
 use self::types::TypeVar;
 use crate::hir;
 use crate::mir;
@@ -23,15 +24,13 @@ use types::{TypeId, Types};
 pub fn typeck(prog: hir::Decls) -> mir::Program {
     let mut checker = Checker::new();
     for (name, item) in prog.values.iter() {
-        let ty = checker.lower_type(&item.anno);
-        checker.declare(name.clone(), ty);
+        checker.declare(name.clone(), &item.anno);
     }
 
     let mut values = HashMap::with_capacity(prog.values.len());
     for (name, item) in prog.values {
-        let ty = checker.lower_type(&item.anno);
-        let item = checker.check_expr(item.body, ty);
-        values.insert(name, item);
+        let body = checker.define(&name, item.body);
+        values.insert(name, body);
     }
 
     checker.solve_constraints();
@@ -71,8 +70,18 @@ impl Checker {
         }
     }
 
-    pub fn declare(&mut self, name: mir::Name, ty: TypeId) {
+    pub fn declare(&mut self, name: mir::Name, ty: &hir::Type) {
+        let ty = self.lower_type(ty, Mutability::Immutable);
         self.context.insert(name, ty);
+    }
+
+    pub fn define(&mut self, name: &mir::Name, expr: hir::Expr) -> tween::Expr {
+        let &ty = self.context.get(name).unwrap();
+        self.types.make_mutable(&ty);
+        let item = self.check_expr(expr, ty);
+        self.types.make_immutable(&ty);
+
+        item
     }
 
     pub fn solve_constraints(&mut self) {
@@ -106,11 +115,10 @@ impl Checker {
             .collect();
 
         debug!("Substituting type definitions");
-        let old_types = std::mem::take(&mut self.types);
         let mut types = varless::Types::new();
 
-        for (id, ty) in old_types {
-            types.add(varless::TypeId(id.0), self.subst_type(ty));
+        for (id, ty) in self.types.iter() {
+            types.add(varless::TypeId(id.0), self.subst_type(ty.clone()));
         }
 
         (ctx, types)

@@ -1,3 +1,5 @@
+use log::trace;
+
 use super::tween;
 use super::types::{Type, TypeId};
 use super::Checker;
@@ -66,6 +68,7 @@ impl Checker {
                 varless::Type::Arrow(self.subst_typeid(from), self.subst_typeid(into))
             }
             Type::Var(_, v) => {
+                trace!("substituting typevar {v:?}");
                 if let Some(ty) = self.subst.get(&v) {
                     let ty = self.types.get(ty).clone();
                     self.subst_type(ty)

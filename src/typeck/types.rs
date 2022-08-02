@@ -31,6 +31,42 @@ impl Types {
     pub fn get(&self, id: &TypeId) -> &Type {
         self.types.get_by_left(id).unwrap()
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&TypeId, &Type)> {
+        self.types.iter()
+    }
+
+    /// Turn all immutable type variables into mutable ones for the given type.
+    pub fn make_mutable(&mut self, id: &TypeId) {
+        self.make_mutability(id, Mutability::Mutable)
+    }
+
+    /// Turn all mutable type variables into immutable ones for the given type.
+    pub fn make_immutable(&mut self, id: &TypeId) {
+        self.make_mutability(id, Mutability::Immutable)
+    }
+
+    fn make_mutability(&mut self, id: &TypeId, mutability: Mutability) {
+        match self.get(id) {
+            Type::Var(_, v) => {
+                let v = *v;
+                self.types.insert(*id, Type::Var(mutability, v));
+            }
+
+            Type::Arrow(t, u) => {
+                let (t, u) = (*t, *u);
+                self.make_mutability(&t, mutability);
+                self.make_mutability(&u, mutability);
+            }
+
+            Type::Bottom
+            | Type::Bool
+            | Type::Regex
+            | Type::Range(..)
+            | Type::String(..)
+            | Type::Error => (),
+        }
+    }
 }
 
 impl IntoIterator for Types {

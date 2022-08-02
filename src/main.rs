@@ -25,7 +25,7 @@ fn main() {
         elze: Box::new(Expr::Impossible),
     };
     let z = ValueDef {
-        anno: Type::Range(0, 10),
+        anno: Type::Wildcard,
         body: z,
     };
 

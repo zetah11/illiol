@@ -1,4 +1,5 @@
 use super::tween as mir;
+use super::tween::Mutability;
 use super::Checker;
 use crate::hir;
 
@@ -6,7 +7,7 @@ impl Checker {
     pub fn infer_expr(&mut self, expr: hir::Expr) -> mir::Expr {
         let (node, ty) = match expr {
             hir::Expr::Anno(expr, ty) => {
-                let ty = self.lower_type(&ty);
+                let ty = self.lower_type(&ty, Mutability::Mutable);
                 return self.check_expr(*expr, ty);
             }
 
