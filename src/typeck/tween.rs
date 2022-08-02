@@ -52,3 +52,9 @@ pub enum Pat {
     Lit(Literal),
     Wildcard,
 }
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum Mutability {
+    Immutable,
+    Mutable,
+}

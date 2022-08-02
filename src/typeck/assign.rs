@@ -1,6 +1,7 @@
 use crate::mir::Literal;
 
 use super::solve::Constraint;
+use super::tween::Mutability;
 use super::types::{Type, TypeId};
 use super::Checker;
 
@@ -17,6 +18,25 @@ impl Checker {
             (Type::String(pat1), Type::String(pat2)) => {
                 assert_eq!(pat1, pat2);
             }
+
+            (Type::Var(_, v), _) if self.subst.contains_key(v) => {
+                let &into = self.subst.get(v).unwrap();
+                self.check_assignable(into, from)
+            }
+
+            (_, Type::Var(_, w)) if self.subst.contains_key(w) => {
+                let &from = self.subst.get(w).unwrap();
+                self.check_assignable(into, from)
+            }
+
+            (Type::Var(Mutability::Mutable, v), _) => {
+                self.subst.insert(*v, from);
+            }
+
+            (_, Type::Var(Mutability::Mutable, w)) => {
+                self.subst.insert(*w, into);
+            }
+
             (Type::Error, _) | (_, Type::Error) => (),
             _ => panic!("inequal types"),
         }

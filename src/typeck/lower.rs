@@ -1,3 +1,4 @@
+use super::tween::Mutability;
 use super::types::{Type, TypeId};
 use super::Checker;
 use crate::hir;
@@ -14,6 +15,7 @@ impl Checker {
                 let into = self.lower_type(&*into);
                 self.types.add(Type::Arrow(from, into))
             }
+            hir::Type::Wildcard => self.fresh_type(),
             hir::Type::Invalid => self.error_type(),
         }
     }
@@ -28,6 +30,11 @@ impl Checker {
 
     pub fn error_type(&mut self) -> TypeId {
         self.types.add(Type::Error)
+    }
+
+    pub fn fresh_type(&mut self) -> TypeId {
+        let v = self.fresh_tyvar();
+        self.types.add(Type::Var(Mutability::Mutable, v))
     }
 
     pub fn regex_type(&mut self) -> TypeId {

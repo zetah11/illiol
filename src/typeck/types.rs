@@ -2,6 +2,8 @@ use bimap::BiMap;
 
 use crate::Regex;
 
+use super::tween::Mutability;
+
 #[derive(Debug, Default)]
 pub struct Types {
     types: BiMap<TypeId, Type>,
@@ -43,6 +45,9 @@ impl IntoIterator for Types {
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct TypeId(pub(super) usize);
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct TypeVar(pub(super) usize);
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Type {
     Bottom,
@@ -53,6 +58,8 @@ pub enum Type {
     String(Regex),
 
     Arrow(TypeId, TypeId),
+
+    Var(Mutability, TypeVar),
 
     Error,
 }

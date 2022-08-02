@@ -65,6 +65,14 @@ impl Checker {
             Type::Arrow(from, into) => {
                 varless::Type::Arrow(self.subst_typeid(from), self.subst_typeid(into))
             }
+            Type::Var(_, v) => {
+                if let Some(ty) = self.subst.get(&v) {
+                    let ty = self.types.get(ty).clone();
+                    self.subst_type(ty)
+                } else {
+                    panic!("unsolved type var!");
+                }
+            }
             Type::Error => varless::Type::Error,
         }
     }

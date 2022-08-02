@@ -25,6 +25,8 @@ pub enum Type {
 
     Arrow(Box<Type>, Box<Type>),
 
+    Wildcard,
+
     Invalid,
 }
 

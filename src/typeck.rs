@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use log::debug;
 
 use self::solve::Constraint;
+use self::types::TypeVar;
 use crate::hir;
 use crate::mir;
 use crate::types as varless;
@@ -48,11 +49,13 @@ pub fn typeck(prog: hir::Decls) -> mir::Program {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct Checker {
     context: HashMap<mir::Name, TypeId>,
     types: Types,
+    subst: HashMap<TypeVar, TypeId>,
 
+    curr_tyvar: TypeVar,
     worklist: Vec<Constraint>,
 }
 
@@ -61,7 +64,9 @@ impl Checker {
         Self {
             context: HashMap::new(),
             types: Types::new(),
+            subst: HashMap::new(),
 
+            curr_tyvar: TypeVar(0),
             worklist: Vec::new(),
         }
     }
@@ -109,5 +114,11 @@ impl Checker {
         }
 
         (ctx, types)
+    }
+
+    fn fresh_tyvar(&mut self) -> TypeVar {
+        let v = self.curr_tyvar;
+        self.curr_tyvar = TypeVar(self.curr_tyvar.0 + 1);
+        v
     }
 }
