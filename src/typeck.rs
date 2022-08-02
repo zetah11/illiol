@@ -36,19 +36,16 @@ pub fn typeck(prog: hir::Decls) -> mir::Program {
 
     checker.solve_constraints();
 
-    // TODO: ew
-    #[allow(clippy::needless_collect)]
-    let values: Vec<_> = values
-        .into_iter()
-        .map(|(name, expr)| (name, checker.substitute(expr)))
-        .collect();
+    let (types, new_ids) = checker.subst_types();
+    let context = checker.subst_ctx(&new_ids);
 
-    let (context, types, new_ids) = checker.ctx_and_types();
-
-    debug!("Fixing up value defs");
     let values = values
         .into_iter()
-        .map(|(name, expr)| (name, fixup_expr(expr, &new_ids)))
+        .map(|(name, expr)| {
+            let expr = checker.substitute(expr);
+            let expr = fixup_expr(expr, &new_ids);
+            (name, expr)
+        })
         .collect();
 
     mir::Program {
@@ -116,30 +113,7 @@ impl Checker {
         }
     }
 
-    pub fn ctx_and_types(
-        mut self,
-    ) -> (
-        HashMap<mir::Name, varless::TypeId>,
-        varless::Types,
-        HashMap<varless::TypeId, varless::TypeId>,
-    ) {
-        debug!("Substituting type context");
-        let ctx: HashMap<_, _> = self.context.drain().collect();
-        let ctx = ctx
-            .into_iter()
-            .map(|(name, ty)| (name, self.subst_typeid(ty)))
-            .collect();
-
-        // NOTE: Although `typeck::types::Types` memoizes its types, we may
-        // quickly end up with duplicate types as we solve various constraints.
-        // For instance, if we have two types `t = 0 .. 10` and `u = $1`, as
-        // well as the constraint `t = u`, we will end up with two names for the
-        // same type `t` (`t` and `u`). As we memoize the substituted types,
-        // this will be reduced down to a single type `t` - but this means that
-        // any ids in other type defs or values will be out of date (e.g.
-        // referring to a `u` that no longer exists). To combat this, we keep
-        // a surjective map from old names to the new names, and use this to
-        // "fix up" the out-of-date names.
+    pub fn subst_types(&mut self) -> (varless::Types, HashMap<varless::TypeId, varless::TypeId>) {
         debug!("Substituting type definitions");
         let mut types = BiMap::new();
         let mut new_ids = HashMap::new();
@@ -179,7 +153,22 @@ impl Checker {
             new_types.add(id, ty);
         }
 
-        (ctx, new_types, new_ids)
+        (new_types, new_ids)
+    }
+
+    pub fn subst_ctx(
+        &mut self,
+        new_ids: &HashMap<varless::TypeId, varless::TypeId>,
+    ) -> HashMap<mir::Name, varless::TypeId> {
+        debug!("Substituting type context");
+        let ctx: HashMap<_, _> = self.context.drain().collect();
+        ctx.into_iter()
+            .map(|(name, ty)| {
+                let ty = self.subst_typeid(ty);
+                let ty = new_ids.get(&ty).copied().unwrap_or(ty);
+                (name, ty)
+            })
+            .collect()
     }
 
     fn fresh_tyvar(&mut self) -> TypeVar {
