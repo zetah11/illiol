@@ -6,7 +6,7 @@ impl Checker {
     pub fn infer_expr(&mut self, expr: hir::Expr) -> mir::Expr {
         let (node, ty) = match expr {
             hir::Expr::Anno(expr, ty) => {
-                let ty = self.make_type(&ty);
+                let ty = self.lower_type(&ty);
                 return self.check_expr(*expr, ty);
             }
 

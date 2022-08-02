@@ -2,31 +2,38 @@ mod assign;
 mod bind;
 mod check;
 mod infer;
+mod lower;
+mod solve;
 mod substitute;
 mod tween;
 mod types;
 
 use std::collections::HashMap;
 
+use log::debug;
+
+use self::solve::Constraint;
 use crate::hir;
 use crate::mir;
 use crate::types as varless;
 
-use types::{Type, TypeId, Types};
+use types::{TypeId, Types};
 
 pub fn typeck(prog: hir::Decls) -> mir::Program {
     let mut checker = Checker::new();
     for (name, item) in prog.values.iter() {
-        let ty = checker.make_type(&item.anno);
+        let ty = checker.lower_type(&item.anno);
         checker.declare(name.clone(), ty);
     }
 
     let mut values = HashMap::with_capacity(prog.values.len());
     for (name, item) in prog.values {
-        let ty = checker.make_type(&item.anno);
+        let ty = checker.lower_type(&item.anno);
         let item = checker.check_expr(item.body, ty);
         values.insert(name, item);
     }
+
+    checker.solve_constraints();
 
     let values = values
         .into_iter()
@@ -45,6 +52,8 @@ pub fn typeck(prog: hir::Decls) -> mir::Program {
 struct Checker {
     context: HashMap<mir::Name, TypeId>,
     types: Types,
+
+    worklist: Vec<Constraint>,
 }
 
 impl Checker {
@@ -52,6 +61,8 @@ impl Checker {
         Self {
             context: HashMap::new(),
             types: Types::new(),
+
+            worklist: Vec::new(),
         }
     }
 
@@ -59,13 +70,37 @@ impl Checker {
         self.context.insert(name, ty);
     }
 
+    pub fn solve_constraints(&mut self) {
+        loop {
+            let worklist: Vec<_> = self.worklist.drain(..).collect();
+            let prev = worklist.len();
+
+            if prev == 0 {
+                debug!("Done solving");
+                break;
+            }
+
+            debug!("Solve loop; {} constraints to solve", prev);
+
+            for ctr in worklist {
+                self.solve(ctr);
+            }
+
+            if self.worklist.len() >= prev {
+                panic!("constraint solving made no progress!")
+            }
+        }
+    }
+
     pub fn ctx_and_types(mut self) -> (HashMap<mir::Name, varless::TypeId>, varless::Types) {
+        debug!("Substituting type context");
         let ctx: HashMap<_, _> = self.context.drain().collect();
         let ctx = ctx
             .into_iter()
             .map(|(name, ty)| (name, self.subst_typeid(ty)))
             .collect();
 
+        debug!("Substituting type definitions");
         let old_types = std::mem::take(&mut self.types);
         let mut types = varless::Types::new();
 
@@ -74,36 +109,5 @@ impl Checker {
         }
 
         (ctx, types)
-    }
-
-    fn make_type(&mut self, ty: &hir::Type) -> TypeId {
-        match ty {
-            hir::Type::Bool => self.boolean_type(),
-            hir::Type::Regex => self.regex_type(),
-            hir::Type::Range(lo, hi) => self.types.add(Type::Range(*lo, *hi)),
-            hir::Type::String(pat) => self.types.add(Type::String(pat.clone())),
-            hir::Type::Arrow(from, into) => {
-                let from = self.make_type(&*from);
-                let into = self.make_type(&*into);
-                self.types.add(Type::Arrow(from, into))
-            }
-            hir::Type::Invalid => self.error_type(),
-        }
-    }
-
-    fn boolean_type(&mut self) -> TypeId {
-        self.types.add(Type::Bool)
-    }
-
-    fn bottom_type(&mut self) -> TypeId {
-        self.types.add(Type::Bottom)
-    }
-
-    fn error_type(&mut self) -> TypeId {
-        self.types.add(Type::Error)
-    }
-
-    fn regex_type(&mut self) -> TypeId {
-        self.types.add(Type::Regex)
     }
 }

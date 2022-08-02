@@ -4,6 +4,8 @@ use illiol::hir::{Decls, Expr, Literal, Pat, Type, ValueDef};
 use illiol::typeck;
 
 fn main() {
+    env_logger::init();
+
     let x = Expr::Lit(Literal::Integer(5));
     let x = ValueDef {
         anno: Type::Range(0, 10),

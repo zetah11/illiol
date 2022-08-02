@@ -1,10 +1,9 @@
-pub use crate::mir::{Literal, Operator};
+pub use crate::mir::Literal;
 
 use std::collections::HashMap;
 
 use super::types::{TypeId, Types};
-
-pub type Name = String;
+use crate::mir::Name;
 
 #[derive(Debug)]
 pub struct Program {
@@ -36,10 +35,6 @@ pub enum ExprNode {
     },
 
     Call(Box<Expr>, Box<Expr>),
-
-    Op(Operator, Vec<Expr>),
-
-    Cast(Box<Expr>),
 
     Lit(Literal),
 

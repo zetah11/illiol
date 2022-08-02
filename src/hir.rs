@@ -43,34 +43,12 @@ pub enum Expr {
 
     Call(Box<Expr>, Box<Expr>),
 
-    Op(Operator, Vec<Expr>),
-
     Lit(Literal),
 
     Name(Name),
 
     Impossible,
     Invalid,
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum Operator {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Exp,
-    Mod,
-
-    And,
-    AndDo,
-    Or,
-    OrDo,
-    Xor,
-
-    Not,
-
-    In,
 }
 
 #[derive(Clone, Debug)]

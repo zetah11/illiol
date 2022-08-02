@@ -33,11 +33,9 @@ pub enum ExprNode {
         elze: Box<Expr>,
     },
 
+    Tuple(Vec<Expr>),
+
     Call(Box<Expr>, Box<Expr>),
-
-    Op(Operator, Vec<Expr>),
-
-    Cast(Box<Expr>),
 
     Lit(Literal),
 
@@ -45,26 +43,6 @@ pub enum ExprNode {
 
     Impossible,
     Invalid,
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum Operator {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Exp,
-    Mod,
-
-    And,
-    AndDo,
-    Or,
-    OrDo,
-    Xor,
-
-    Not,
-
-    In,
 }
 
 #[derive(Clone, Debug)]

@@ -32,15 +32,13 @@ impl Checker {
                 }
             }
 
-            hir::Expr::Op(..) => todo!(),
-
             hir::Expr::Lit(hir::Literal::Integer(v)) => {
-                self.check_int(ty, v);
+                self.check_lit(mir::Literal::Integer(v), ty);
                 mir::ExprNode::Lit(mir::Literal::Integer(v))
             }
 
             hir::Expr::Lit(hir::Literal::String(v)) => {
-                self.check_str(ty, &v);
+                self.check_lit(mir::Literal::String(v.clone()), ty);
                 mir::ExprNode::Lit(mir::Literal::String(v))
             }
 

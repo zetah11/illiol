@@ -1,6 +1,5 @@
 use super::tween;
-use super::types::Type;
-use super::types::TypeId;
+use super::types::{Type, TypeId};
 use super::Checker;
 use crate::mir;
 use crate::types as varless;
@@ -38,18 +37,6 @@ impl Checker {
                 let expr = Box::new(self.substitute(*expr));
 
                 mir::ExprNode::Call(func, expr)
-            }
-
-            tween::ExprNode::Op(op, args) => {
-                let args = args.into_iter().map(|expr| self.substitute(expr)).collect();
-
-                mir::ExprNode::Op(op, args)
-            }
-
-            tween::ExprNode::Cast(expr) => {
-                let expr = Box::new(self.substitute(*expr));
-
-                mir::ExprNode::Cast(expr)
             }
 
             tween::ExprNode::Lit(lit) => mir::ExprNode::Lit(lit),

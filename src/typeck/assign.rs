@@ -1,3 +1,6 @@
+use crate::mir::Literal;
+
+use super::solve::Constraint;
 use super::types::{Type, TypeId};
 use super::Checker;
 
@@ -26,29 +29,7 @@ impl Checker {
         }
     }
 
-    pub fn check_bool(&mut self, ty: TypeId) {
-        let bool = self.boolean_type();
-        self.check_assignable(bool, ty);
-    }
-
-    pub fn check_int(&mut self, ty: TypeId, val: i64) {
-        match self.types.get(&ty) {
-            Type::Range(lo, hi) => {
-                assert!(lo <= &val && &val < hi);
-            }
-            _ => panic!("not an integer type"),
-        }
-    }
-
-    pub fn check_regex(&mut self, ty: TypeId) {
-        let regex = self.regex_type();
-        self.check_assignable(regex, ty);
-    }
-
-    pub fn check_str(&mut self, ty: TypeId, val: &str) {
-        match self.types.get(&ty) {
-            Type::String(pat) => assert!(pat.is_match(val)),
-            _ => panic!("not a string type"),
-        }
+    pub fn check_lit(&mut self, lit: Literal, ty: TypeId) {
+        self.worklist.push(Constraint::FromLit(lit, ty));
     }
 }
