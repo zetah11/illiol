@@ -15,6 +15,7 @@ impl Checker {
                 let into = self.lower_type(&*into, mutability);
                 self.fun_type(from, into)
             }
+            hir::Type::Named(name) => Type::Named(name.clone()),
             hir::Type::Wildcard => self.fresh_type(mutability),
             hir::Type::Invalid => self.error_type(),
         }

@@ -2,6 +2,7 @@ mod constraint;
 
 use log::trace;
 
+use super::tween::Mutability;
 use super::types::Type;
 use super::Checker;
 use crate::mir::Literal;
@@ -19,6 +20,11 @@ impl Checker {
             Constraint::Assignable(into, from) => {
                 trace!("Solving Assignable({into:?}, {from:?})");
                 self.check_assignable(into, from);
+            }
+
+            Constraint::Instantiate(vars, v, ty) => {
+                let ty = self.inst_ty(ty, &vars);
+                self.check_assignable(Type::Var(Mutability::Mutable, v), ty);
             }
         }
     }

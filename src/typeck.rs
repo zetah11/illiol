@@ -27,7 +27,7 @@ pub fn typeck(prog: hir::Decls) -> mir::Program {
     debug!("Declaring");
     let mut checker = Checker::new();
     for (name, item) in prog.values.iter() {
-        checker.declare(name.clone(), &item.anno);
+        checker.declare(name.clone(), item.vars.clone(), &item.anno);
     }
 
     trace!("Declared types {:?}", checker.context);
@@ -87,9 +87,15 @@ impl Checker {
         }
     }
 
-    pub fn declare(&mut self, name: mir::Name, ty: &hir::Type) {
+    pub fn declare(&mut self, name: mir::Name, vars: Vec<mir::Name>, ty: &hir::Type) {
         let ty = self.lower_type(ty, Mutability::Immutable);
-        self.context.insert(name, Template::mono(ty));
+        self.context.insert(
+            name,
+            Template {
+                params: vars,
+                uninst: ty,
+            },
+        );
     }
 
     pub fn define(&mut self, name: &mir::Name, expr: hir::Expr) -> tween::Expr {

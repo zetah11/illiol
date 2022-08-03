@@ -11,6 +11,8 @@ pub struct Decls {
 
 #[derive(Clone, Debug)]
 pub struct ValueDef {
+    /// Type variables assosciated with this value definition.
+    pub vars: Vec<Name>,
     pub anno: Type,
     pub body: Expr,
 }
@@ -24,6 +26,8 @@ pub enum Type {
     String(Regex),
 
     Arrow(Box<Type>, Box<Type>),
+
+    Named(Name),
 
     Wildcard,
 

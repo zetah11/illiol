@@ -11,24 +11,36 @@ fn main() {
             Pat::Bind("a".into()),
             Box::new(Expr::Name("a".into())),
         )),
-        Type::Arrow(Box::new(Type::Range(0, 10)), Box::new(Type::Range(0, 10))),
+        Type::Arrow(
+            Box::new(Type::Named("T".into())),
+            Box::new(Type::Named("T".into())),
+        ),
     );
     let f = ValueDef {
         anno: Type::Wildcard,
         body: f,
+        vars: vec!["T".into()],
     };
 
-    let x = Expr::Call(
-        Box::new(Expr::Name("f".into())),
-        Box::new(Expr::Lit(Literal::Integer(5))),
-    );
+    let x = Expr::Lit(Literal::Integer(5));
     let x = ValueDef {
-        anno: Type::Wildcard,
+        anno: Type::Range(0, 10),
         body: x,
+        vars: vec![],
+    };
+
+    let y = Expr::Call(
+        Box::new(Expr::Name("f".into())),
+        Box::new(Expr::Name("x".into())),
+    );
+    let y = ValueDef {
+        anno: Type::Wildcard,
+        body: y,
+        vars: vec![],
     };
 
     let prog = Decls {
-        values: HashMap::from([("x".into(), x), ("f".into(), f)]),
+        values: HashMap::from([("x".into(), x), ("y".into(), y), ("f".into(), f)]),
     };
 
     let checked = typeck(prog);
