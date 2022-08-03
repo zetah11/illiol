@@ -44,25 +44,3 @@ impl Type {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    /*
-    use super::{Type, Types};
-
-    #[test]
-    fn types_is_injective() {
-        let mut types = Types::new();
-        let a = types.add(Type::Bool);
-        let b = types.add(Type::Bool);
-        let c = types.add(Type::Range(-5, 10));
-        let d = types.add(Type::Range(-5, 10));
-
-        let x = types.add(Type::Arrow(a, c));
-        let y = types.add(Type::Arrow(b, d));
-
-        assert_eq!(x, y);
-        assert_ne!(x, d);
-    }
-    */
-}

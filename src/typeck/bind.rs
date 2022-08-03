@@ -1,41 +1,41 @@
-use super::tween as mir;
+use super::tween;
 use super::types::Type;
 use super::Checker;
 use crate::hir;
 
 impl Checker {
-    pub fn bind(&mut self, pat: hir::Pat, ty: Type) -> mir::Pat {
+    pub fn bind(&mut self, pat: hir::Pat, ty: Type) -> tween::Pat {
         match pat {
             hir::Pat::Constructor(..) => todo!(),
 
             hir::Pat::Bind(name) => {
                 self.context.insert(name.clone(), ty);
-                mir::Pat::Bind(name)
+                tween::Pat::Bind(name)
             }
 
             hir::Pat::Apply(..) => todo!(),
 
             hir::Pat::Lit(hir::Literal::Boolean(v)) => {
-                self.check_lit(mir::Literal::Boolean(v), ty);
-                mir::Pat::Lit(mir::Literal::Boolean(v))
+                self.check_lit(tween::Literal::Boolean(v), ty);
+                tween::Pat::Lit(tween::Literal::Boolean(v))
             }
 
             hir::Pat::Lit(hir::Literal::Integer(v)) => {
-                self.check_lit(mir::Literal::Integer(v), ty);
-                mir::Pat::Lit(mir::Literal::Integer(v))
+                self.check_lit(tween::Literal::Integer(v), ty);
+                tween::Pat::Lit(tween::Literal::Integer(v))
             }
 
             hir::Pat::Lit(hir::Literal::Regex(v)) => {
-                self.check_lit(mir::Literal::Regex(v.clone()), ty);
-                mir::Pat::Lit(mir::Literal::Regex(v))
+                self.check_lit(tween::Literal::Regex(v.clone()), ty);
+                tween::Pat::Lit(tween::Literal::Regex(v))
             }
 
             hir::Pat::Lit(hir::Literal::String(v)) => {
-                self.check_lit(mir::Literal::String(v.clone()), ty);
-                mir::Pat::Lit(mir::Literal::String(v))
+                self.check_lit(tween::Literal::String(v.clone()), ty);
+                tween::Pat::Lit(tween::Literal::String(v))
             }
 
-            hir::Pat::Wildcard => mir::Pat::Wildcard,
+            hir::Pat::Wildcard => tween::Pat::Wildcard,
         }
     }
 }
