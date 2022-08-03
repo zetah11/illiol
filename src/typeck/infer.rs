@@ -55,7 +55,9 @@ impl Checker {
             hir::Expr::Name(name) => match self.context.get(&name) {
                 Some(ty) => {
                     trace!("`{name}` infers {ty:?}");
-                    (tween::ExprNode::Name(name), ty.clone())
+                    let ty = ty.clone(); // sadness
+                    let ty = self.instantiate(&ty);
+                    (tween::ExprNode::Name(name), ty)
                 }
                 None => (tween::ExprNode::Invalid, self.error_type()),
             },

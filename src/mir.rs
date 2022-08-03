@@ -6,9 +6,15 @@ pub type Name = String;
 
 #[derive(Debug)]
 pub struct Program {
-    pub context: HashMap<Name, TypeId>,
+    pub context: HashMap<Name, Template>,
     pub decls: Decls,
     pub types: Types,
+}
+
+#[derive(Debug)]
+pub struct Template {
+    pub params: Vec<Name>,
+    pub uninst: TypeId,
 }
 
 #[derive(Clone, Debug)]

@@ -1,6 +1,7 @@
 mod assign;
 mod bind;
 mod check;
+mod context;
 mod infer;
 mod lower;
 mod solve;
@@ -19,6 +20,8 @@ use self::types::{Type, TypeVar};
 use crate::hir;
 use crate::mir;
 use crate::types as varless;
+
+use context::Template;
 
 pub fn typeck(prog: hir::Decls) -> mir::Program {
     debug!("Declaring");
@@ -62,7 +65,7 @@ pub fn typeck(prog: hir::Decls) -> mir::Program {
 
 #[derive(Debug)]
 struct Checker {
-    context: HashMap<mir::Name, Type>,
+    context: HashMap<mir::Name, Template>,
     subst: HashMap<TypeVar, Type>,
 
     lower: BiMap<varless::TypeId, varless::Type>,
@@ -86,13 +89,14 @@ impl Checker {
 
     pub fn declare(&mut self, name: mir::Name, ty: &hir::Type) {
         let ty = self.lower_type(ty, Mutability::Immutable);
-        self.context.insert(name, ty);
+        self.context.insert(name, Template::mono(ty));
     }
 
     pub fn define(&mut self, name: &mir::Name, expr: hir::Expr) -> tween::Expr {
         let ty = self.context.get(name).unwrap();
 
-        let ty = ty.clone().make_mutable();
+        // NOTE: we don't instantiate here, because then the generics wouldn't work!
+        let ty = ty.uninst.clone().make_mutable();
         let item = self.check_expr(expr, ty);
         self.solve_constraints(); // solve while vars are still mut
 
@@ -123,13 +127,14 @@ impl Checker {
         }
     }
 
-    pub fn subst_ctx(&mut self) -> HashMap<mir::Name, varless::TypeId> {
+    pub fn subst_ctx(&mut self) -> HashMap<mir::Name, mir::Template> {
         debug!("Substituting type context");
         let ctx: HashMap<_, _> = self.context.drain().collect();
         ctx.into_iter()
             .map(|(name, ty)| {
-                let ty = self.subst_type(ty);
-                (name, ty)
+                let params = ty.params;
+                let uninst = self.subst_type(ty.uninst);
+                (name, mir::Template { params, uninst })
             })
             .collect()
     }

@@ -1,3 +1,4 @@
+use super::context::Template;
 use super::tween;
 use super::types::Type;
 use super::Checker;
@@ -9,7 +10,7 @@ impl Checker {
             hir::Pat::Constructor(..) => todo!(),
 
             hir::Pat::Bind(name) => {
-                self.context.insert(name.clone(), ty);
+                self.context.insert(name.clone(), Template::mono(ty));
                 tween::Pat::Bind(name)
             }
 

@@ -70,6 +70,13 @@ impl Checker {
                 self.check_assignable(u2, u1);
             }
 
+            (Type::Named(n), Type::Named(m)) => {
+                if n != m {
+                    trace!("Inequal types - {n:?} <- {m:?}");
+                    panic!("inequal types");
+                }
+            }
+
             (Type::Error, _) | (_, Type::Error) => (),
             (into, from) => {
                 trace!("Inequal types - {into:?} <- {from:?}");
@@ -107,6 +114,7 @@ impl Checker {
             | Type::Regex
             | Type::Range(..)
             | Type::String(..)
+            | Type::Named(..)
             | Type::Error => false,
         }
     }

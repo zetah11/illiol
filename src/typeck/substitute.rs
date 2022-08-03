@@ -72,6 +72,7 @@ impl Checker {
                     panic!("unsolved type var!");
                 }
             }
+            Type::Named(name) => varless::Type::Named(name),
             Type::Error => varless::Type::Error,
         };
 

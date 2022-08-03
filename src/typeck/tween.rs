@@ -1,9 +1,8 @@
-pub use crate::mir::Literal;
+pub use crate::mir::{Literal, Name};
 
 use std::collections::HashMap;
 
 use super::types::Type;
-use crate::mir::Name;
 
 #[derive(Clone, Debug)]
 pub struct Decls {

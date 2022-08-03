@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::mir::Name;
 use crate::Regex;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -15,6 +16,7 @@ pub enum Type {
     String(Regex),
 
     Arrow(TypeId, TypeId),
+    Named(Name),
 
     Error,
 }
