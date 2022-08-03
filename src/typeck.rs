@@ -11,42 +11,47 @@ mod types;
 use std::collections::HashMap;
 
 use bimap::BiMap;
-use log::debug;
+use log::{debug, trace};
 
 use self::solve::Constraint;
 use self::tween::Mutability;
-use self::types::TypeVar;
+use self::types::{Type, TypeVar};
 use crate::hir;
 use crate::mir;
 use crate::types as varless;
 
-use types::{TypeId, Types};
-
 pub fn typeck(prog: hir::Decls) -> mir::Program {
+    debug!("Declaring");
     let mut checker = Checker::new();
     for (name, item) in prog.values.iter() {
         checker.declare(name.clone(), &item.anno);
     }
 
+    trace!("Declared types {:?}", checker.context);
+
+    debug!("Defining & solving");
     let mut values = HashMap::with_capacity(prog.values.len());
     for (name, item) in prog.values {
         let body = checker.define(&name, item.body);
         values.insert(name, body);
     }
 
-    checker.solve_constraints();
+    if !checker.solve_constraints() {
+        trace!("Unsolved constraints {:?}", checker.worklist);
+        trace!("Types {:?}", checker.context);
+        panic!("unsolved constraints!");
+    }
 
-    let (types, new_ids) = checker.subst_types();
-    let context = checker.subst_ctx(&new_ids);
-
+    debug!("Substituting & memoizing");
+    let context = checker.subst_ctx();
     let values = values
         .into_iter()
         .map(|(name, expr)| {
             let expr = checker.substitute(expr);
-            let expr = fixup_expr(expr, &new_ids);
             (name, expr)
         })
         .collect();
+    let types = checker.lower.into_iter().collect();
 
     mir::Program {
         context,
@@ -57,9 +62,10 @@ pub fn typeck(prog: hir::Decls) -> mir::Program {
 
 #[derive(Debug)]
 struct Checker {
-    context: HashMap<mir::Name, TypeId>,
-    types: Types,
-    subst: HashMap<TypeVar, TypeId>,
+    context: HashMap<mir::Name, Type>,
+    subst: HashMap<TypeVar, Type>,
+
+    lower: BiMap<varless::TypeId, varless::Type>,
 
     curr_tyvar: TypeVar,
     worklist: Vec<Constraint>,
@@ -69,8 +75,9 @@ impl Checker {
     pub fn new() -> Self {
         Self {
             context: HashMap::new(),
-            types: Types::new(),
             subst: HashMap::new(),
+
+            lower: BiMap::new(),
 
             curr_tyvar: TypeVar(0),
             worklist: Vec::new(),
@@ -83,89 +90,45 @@ impl Checker {
     }
 
     pub fn define(&mut self, name: &mir::Name, expr: hir::Expr) -> tween::Expr {
-        let &ty = self.context.get(name).unwrap();
-        self.types.make_mutable(&ty);
+        let ty = self.context.get(name).unwrap();
+
+        let ty = ty.clone().make_mutable();
         let item = self.check_expr(expr, ty);
-        self.types.make_immutable(&ty);
+        self.solve_constraints(); // solve while vars are still mut
 
         item
     }
 
-    pub fn solve_constraints(&mut self) {
+    /// Solve as many constraints as possible. Returns `false` if this was
+    /// unsuccessful - i.e. there are unsolved constraints.
+    pub fn solve_constraints(&mut self) -> bool {
         loop {
             let worklist: Vec<_> = self.worklist.drain(..).collect();
             let prev = worklist.len();
 
             if prev == 0 {
-                debug!("Done solving");
-                break;
+                trace!("No more constraints");
+                return true;
             }
 
-            debug!("Solve loop; {} constraints to solve", prev);
+            trace!("Solve loop; {} constraints to solve", prev);
 
             for ctr in worklist {
                 self.solve(ctr);
             }
 
             if self.worklist.len() >= prev {
-                panic!("constraint solving made no progress!")
+                return false;
             }
         }
     }
 
-    pub fn subst_types(&mut self) -> (varless::Types, HashMap<varless::TypeId, varless::TypeId>) {
-        debug!("Substituting type definitions");
-        let mut types = BiMap::new();
-        let mut new_ids = HashMap::new();
-
-        for (id, ty) in self.types.iter() {
-            let subst = self.subst_type(ty.clone());
-            let new_id = if let Some(new_id) = types.get_by_right(&subst) {
-                *new_id
-            } else {
-                let id = varless::TypeId(types.len());
-                types.insert(id, subst);
-                id
-            };
-            new_ids.insert(varless::TypeId(id.0), new_id);
-        }
-
-        debug!("Fixing up types");
-        let mut new_types = varless::Types::new();
-
-        for (id, ty) in types {
-            use varless::Type;
-            let ty = match ty {
-                Type::Bottom
-                | Type::Bool
-                | Type::Regex
-                | Type::Range(..)
-                | Type::String(..)
-                | Type::Error => ty,
-
-                Type::Arrow(t, u) => {
-                    let t = new_ids.get(&t).copied().unwrap_or(t);
-                    let u = new_ids.get(&u).copied().unwrap_or(u);
-                    Type::Arrow(t, u)
-                }
-            };
-
-            new_types.add(id, ty);
-        }
-
-        (new_types, new_ids)
-    }
-
-    pub fn subst_ctx(
-        &mut self,
-        new_ids: &HashMap<varless::TypeId, varless::TypeId>,
-    ) -> HashMap<mir::Name, varless::TypeId> {
+    pub fn subst_ctx(&mut self) -> HashMap<mir::Name, varless::TypeId> {
         debug!("Substituting type context");
         let ctx: HashMap<_, _> = self.context.drain().collect();
         ctx.into_iter()
             .map(|(name, ty)| {
-                let ty = self.subst_typeid(ty);
-                let ty = new_ids.get(&ty).copied().unwrap_or(ty);
+                let ty = self.subst_type(ty);
                 (name, ty)
             })
             .collect()
@@ -176,61 +139,4 @@ impl Checker {
         self.curr_tyvar = TypeVar(self.curr_tyvar.0 + 1);
         v
     }
-}
-
-fn fixup_expr(expr: mir::Expr, new_ids: &HashMap<varless::TypeId, varless::TypeId>) -> mir::Expr {
-    use mir::{Expr, ExprNode};
-
-    let node = match expr.node {
-        ExprNode::Fun(pat, body) => {
-            let pat = fixup_pat(pat, new_ids);
-            let body = Box::new(fixup_expr(*body, new_ids));
-            ExprNode::Fun(pat, body)
-        }
-
-        ExprNode::Let {
-            pat,
-            bound,
-            then,
-            elze,
-        } => {
-            let pat = fixup_pat(pat, new_ids);
-            let bound = Box::new(fixup_expr(*bound, new_ids));
-            let then = Box::new(fixup_expr(*then, new_ids));
-            let elze = Box::new(fixup_expr(*elze, new_ids));
-            ExprNode::Let {
-                pat,
-                bound,
-                then,
-                elze,
-            }
-        }
-
-        ExprNode::Tuple(args) => {
-            let args = args
-                .into_iter()
-                .map(|arg| fixup_expr(arg, new_ids))
-                .collect();
-            ExprNode::Tuple(args)
-        }
-
-        ExprNode::Call(func, arg) => {
-            let func = Box::new(fixup_expr(*func, new_ids));
-            let arg = Box::new(fixup_expr(*arg, new_ids));
-            ExprNode::Call(func, arg)
-        }
-
-        ExprNode::Lit(lit) => ExprNode::Lit(lit),
-        ExprNode::Name(name) => ExprNode::Name(name),
-        ExprNode::Impossible => ExprNode::Impossible,
-        ExprNode::Invalid => ExprNode::Invalid,
-    };
-
-    let anno = new_ids.get(&expr.anno).copied().unwrap_or(expr.anno);
-
-    Expr { node, anno }
-}
-
-fn fixup_pat(pat: mir::Pat, _new_ids: &HashMap<varless::TypeId, varless::TypeId>) -> mir::Pat {
-    pat
 }

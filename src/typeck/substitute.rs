@@ -1,13 +1,13 @@
 use log::trace;
 
 use super::tween;
-use super::types::{Type, TypeId};
+use super::types::Type;
 use super::Checker;
 use crate::mir;
 use crate::types as varless;
 
 impl Checker {
-    pub fn substitute(&self, expr: tween::Expr) -> mir::Expr {
+    pub fn substitute(&mut self, expr: tween::Expr) -> mir::Expr {
         let node = match expr.node {
             tween::ExprNode::Fun(pat, body) => {
                 let pat = self.subst_pat(pat);
@@ -49,34 +49,38 @@ impl Checker {
 
         mir::Expr {
             node,
-            anno: self.subst_typeid(expr.anno),
+            anno: self.subst_type(expr.anno),
         }
     }
 
-    pub fn subst_typeid(&self, ty: TypeId) -> varless::TypeId {
-        varless::TypeId(ty.0)
-    }
-
-    pub fn subst_type(&self, ty: Type) -> varless::Type {
-        match ty {
+    pub fn subst_type(&mut self, ty: Type) -> varless::TypeId {
+        let ty = match ty {
             Type::Bottom => varless::Type::Bottom,
             Type::Bool => varless::Type::Bool,
             Type::Regex => varless::Type::Regex,
             Type::Range(lo, hi) => varless::Type::Range(lo, hi),
             Type::String(pat) => varless::Type::String(pat),
             Type::Arrow(from, into) => {
-                varless::Type::Arrow(self.subst_typeid(from), self.subst_typeid(into))
+                varless::Type::Arrow(self.subst_type(*from), self.subst_type(*into))
             }
             Type::Var(_, v) => {
                 trace!("Substituting typevar {v:?}");
                 if let Some(ty) = self.subst.get(&v) {
-                    let ty = self.types.get(ty).clone();
-                    self.subst_type(ty)
+                    let ty = ty.clone();
+                    return self.subst_type(ty);
                 } else {
                     panic!("unsolved type var!");
                 }
             }
             Type::Error => varless::Type::Error,
+        };
+
+        if let Some(id) = self.lower.get_by_right(&ty) {
+            *id
+        } else {
+            let id = varless::TypeId(self.lower.len());
+            self.lower.insert(id, ty);
+            id
         }
     }
 

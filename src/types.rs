@@ -39,3 +39,16 @@ impl Types {
         self.types.get(id).unwrap()
     }
 }
+
+impl FromIterator<(TypeId, Type)> for Types {
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = (TypeId, Type)>,
+    {
+        let mut types = Self::new();
+        for (id, ty) in iter {
+            types.add(id, ty)
+        }
+        types
+    }
+}

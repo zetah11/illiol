@@ -1,7 +1,8 @@
 use crate::mir::Literal;
-use crate::typeck::types::TypeId;
+use crate::typeck::types::Type;
 
 #[derive(Debug)]
 pub enum Constraint {
-    FromLit(Literal, TypeId),
+    FromLit(Literal, Type),
+    Assignable(Type, Type),
 }

@@ -1,85 +1,5 @@
-use bimap::BiMap;
-
-use crate::Regex;
-
 use super::tween::Mutability;
-
-#[derive(Debug, Default)]
-pub struct Types {
-    types: BiMap<TypeId, Type>,
-}
-
-impl Types {
-    pub fn new() -> Self {
-        Self {
-            types: BiMap::new(),
-        }
-    }
-
-    /// Add a type to the structure and get back its id. This function memoizes
-    /// its input, such that giving it the same type always returns the same id.
-    pub fn add(&mut self, ty: Type) -> TypeId {
-        if let Some(id) = self.types.get_by_right(&ty) {
-            *id
-        } else {
-            let id = TypeId(self.types.len());
-            self.types.insert(id, ty);
-            id
-        }
-    }
-
-    pub fn get(&self, id: &TypeId) -> &Type {
-        self.types.get_by_left(id).unwrap()
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = (&TypeId, &Type)> {
-        self.types.iter()
-    }
-
-    /// Turn all immutable type variables into mutable ones for the given type.
-    pub fn make_mutable(&mut self, id: &TypeId) {
-        self.make_mutability(id, Mutability::Mutable)
-    }
-
-    /// Turn all mutable type variables into immutable ones for the given type.
-    pub fn make_immutable(&mut self, id: &TypeId) {
-        self.make_mutability(id, Mutability::Immutable)
-    }
-
-    fn make_mutability(&mut self, id: &TypeId, mutability: Mutability) {
-        match self.get(id) {
-            Type::Var(_, v) => {
-                let v = *v;
-                self.types.insert(*id, Type::Var(mutability, v));
-            }
-
-            Type::Arrow(t, u) => {
-                let (t, u) = (*t, *u);
-                self.make_mutability(&t, mutability);
-                self.make_mutability(&u, mutability);
-            }
-
-            Type::Bottom
-            | Type::Bool
-            | Type::Regex
-            | Type::Range(..)
-            | Type::String(..)
-            | Type::Error => (),
-        }
-    }
-}
-
-impl IntoIterator for Types {
-    type IntoIter = bimap::hash::IntoIter<TypeId, Type>;
-    type Item = (TypeId, Type);
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.types.into_iter()
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct TypeId(pub(super) usize);
+use crate::Regex;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct TypeVar(pub(super) usize);
@@ -93,15 +13,41 @@ pub enum Type {
     Range(i64, i64),
     String(Regex),
 
-    Arrow(TypeId, TypeId),
+    Arrow(Box<Type>, Box<Type>),
 
     Var(Mutability, TypeVar),
 
     Error,
 }
 
+impl Type {
+    pub fn make_mutable(self) -> Self {
+        self.make_mutability(Mutability::Mutable)
+    }
+
+    fn make_mutability(self, mutability: Mutability) -> Self {
+        match self {
+            Self::Bottom
+            | Self::Bool
+            | Self::Regex
+            | Self::Range(..)
+            | Self::String(..)
+            | Self::Error => self,
+
+            Self::Arrow(from, into) => {
+                let from = from.make_mutability(mutability);
+                let into = into.make_mutability(mutability);
+                Self::Arrow(Box::new(from), Box::new(into))
+            }
+
+            Self::Var(_, v) => Self::Var(mutability, v),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    /*
     use super::{Type, Types};
 
     #[test]
@@ -118,4 +64,5 @@ mod tests {
         assert_eq!(x, y);
         assert_ne!(x, d);
     }
+    */
 }

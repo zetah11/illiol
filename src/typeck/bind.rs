@@ -1,10 +1,10 @@
 use super::tween as mir;
-use super::types::TypeId;
+use super::types::Type;
 use super::Checker;
 use crate::hir;
 
 impl Checker {
-    pub fn bind(&mut self, pat: hir::Pat, ty: TypeId) -> mir::Pat {
+    pub fn bind(&mut self, pat: hir::Pat, ty: Type) -> mir::Pat {
         match pat {
             hir::Pat::Constructor(..) => todo!(),
 

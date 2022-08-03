@@ -2,15 +2,8 @@ pub use crate::mir::Literal;
 
 use std::collections::HashMap;
 
-use super::types::{TypeId, Types};
+use super::types::Type;
 use crate::mir::Name;
-
-#[derive(Debug)]
-pub struct Program {
-    pub context: HashMap<Name, TypeId>,
-    pub decls: Decls,
-    pub types: Types,
-}
 
 #[derive(Clone, Debug)]
 pub struct Decls {
@@ -20,7 +13,7 @@ pub struct Decls {
 #[derive(Clone, Debug)]
 pub struct Expr {
     pub node: ExprNode,
-    pub anno: TypeId,
+    pub anno: Type,
 }
 
 #[derive(Clone, Debug)]
