@@ -55,9 +55,14 @@ impl Checker {
             hir::Expr::Name(name) => match self.context.get(&name) {
                 Some(ty) => {
                     trace!("`{name}` infers {ty:?}");
-                    let ty = ty.clone(); // sadness
+                    let ty = ty.clone();
+                    let is_monomorphic = ty.params.is_empty();
                     let ty = self.instantiate(&ty);
-                    (tween::ExprNode::Name(name), ty)
+                    if is_monomorphic {
+                        (tween::ExprNode::Name(name), ty)
+                    } else {
+                        (tween::ExprNode::Instantiated(name), ty)
+                    }
                 }
                 None => (tween::ExprNode::Invalid, self.error_type()),
             },

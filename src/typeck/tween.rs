@@ -31,6 +31,7 @@ pub enum ExprNode {
     Lit(Literal),
 
     Name(Name),
+    Instantiated(Name),
 
     Impossible,
     Invalid,

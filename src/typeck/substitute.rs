@@ -43,6 +43,7 @@ impl Checker {
 
             tween::ExprNode::Lit(lit) => mir::ExprNode::Lit(lit),
             tween::ExprNode::Name(name) => mir::ExprNode::Name(name),
+            tween::ExprNode::Instantiated(name) => mir::ExprNode::Instantiated(name),
             tween::ExprNode::Impossible => mir::ExprNode::Impossible,
             tween::ExprNode::Invalid => mir::ExprNode::Invalid,
         };
@@ -69,6 +70,8 @@ impl Checker {
                     let ty = ty.clone();
                     return self.subst_type(ty);
                 } else {
+                    trace!("Unsolved type var {v:?}");
+                    trace!("Subst {:?}", self.subst);
                     panic!("unsolved type var!");
                 }
             }
